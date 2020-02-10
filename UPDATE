@@ -1,0 +1,868 @@
+#clear data
+
+rm(list=ls())
+
+
+
+#some packages we will use
+
+install.packages("xlxs")
+
+install.packages("readxl")
+
+install.packages("sandwich")
+
+install.packages("fBasics")
+
+install.packages("quantmod")
+
+install.packages("lmtest")
+
+install.packages("nlme")
+
+install.packages("urca")
+
+install.packages("forecast")
+
+install.packages("CADFtest")
+
+install.packages("tseries")
+
+install.packages("dynlm")
+
+install.packages("vars")
+
+install.packages("car")
+
+install.packages("EIAdata")
+
+install.packages("tidyquant")
+
+install.packages("readtext")
+
+install.packages("quanteda")
+
+install.packages("xts")
+
+install.packages("Ecdat")
+
+install.packages("structchange")
+
+
+
+require(lmtest)
+
+require(nlme)
+
+require(quantmod)
+
+require(urca)
+
+require(forecast)
+
+require(fBasics)
+
+require(CADFtest)
+
+require(urca)
+
+require(sandwich)
+
+require(lmtest)
+
+require(nlme)
+
+require(tseries)
+
+require(dynlm)
+
+require(vars)
+
+require(car)
+
+require(EIAdata)
+
+require(tidyquant)
+
+require(readxl)
+
+require(xlsx)
+
+require(readtext)
+
+require(quanteda)
+
+require(xts)
+
+require(Ecdat)
+
+require(strucchange)
+
+require(getsymbols)
+library(readr)
+
+library(readxl)
+
+NG1 <- read_excel("C:/Users/qtaillefer/Downloads/NG1.xlsx")
+View(NG1)
+
+plot(NG1)
+
+# Adjust time window for the Natural gas demand 
+
+tsprod <- na.omit(ts(NG1$`production cents`,frequency = 365, start = 2016))
+
+plot(tsprod)
+
+tail(tsprod)
+
+
+
+# Adjust time window for the Total degree days
+
+tsprice <- na.omit(ts(NG1$Price, frequency = 365, start = 2016))
+
+plot(tsprice)
+
+tail(tsprice)
+
+
+
+tspricec <- na.omit(ts(NG1$`price cents`, frequency = 365, start = 2016))
+
+plot(tspricec)
+
+tail(tspricec)
+
+# Take the series first difference
+
+dtsprod <- na.omit(diff(tsprod))
+
+dtsprice <- na.omit(diff(tsprice))
+
+dtspricec <- na.omit(diff(tspricec))
+dtsprice
+
+
+# Test the stationarity of the series level
+
+
+
+adf.test(tsprice)
+adf.test(tspricec)
+
+
+# Test  stationarity for the series first difference
+
+adf.test(dtsprod)
+
+adf.test(dtsprice)
+
+adf.test(dtspricec)
+
+# Bind the series levels 
+
+Bind <-cbind(tsprod,tsprice,tspricec)
+
+View(Bind)
+
+plot(Bind)
+
+
+
+# Bind the differenciated series for use in Q1
+
+Bdind <-cbind(dtsprod,dtsprice,dtspricec)
+
+
+print(Bdind)
+View(Bdind)
+
+plot(Bdind)
+
+
+
+# This is just for fun look at Linear model to see if there is correlation, removed my dollars index and price of natural gas because there was no correlation 
+
+Linearmodel<-lm(dtsprod~dtsprice)
+
+print(Linearmodel)
+
+summary(Linearmodel)
+
+
+
+
+# Question 1 
+
+
+# Estimating a VAR for price returns
+
+# use vars() package
+
+D = cbind(dtsprod,dtspricec)
+D
+
+E = cbind(dtsprod,dtsprice)
+E
+
+
+require(vars)
+# show series and summary statistics
+
+plot(D,xlab="")
+
+summary(D)
+
+# select lag length
+
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+VARselect(D,lag.max=10,type="none")
+
+
+var <- VAR(D, p = 4, type = "both")
+plot(irf(var, impulse = "dtspricec", response = "dtsprod", boot = T, cumulative = FALSE,     n.ahead = 10,ci=0.90))
+plot(irf(var, impulse = "dtspricec", response = "dtsprod", boot = T, cumulative = FALSE,  ortho= TRUE,    n.ahead = 10,ci=0.90))
+
+
+var <- VAR(D, p = 4, type = "both")
+plot(irf(var, impulse = "dtspricec", response = "dtsprod", boot = T, cumulative = FALSE,     n.ahead = 10,ci=0.70))
+plot(irf(var, impulse = "dtspricec", response = "dtsprod", boot = T, cumulative = TRUE,     n.ahead = 10,ci=0.70))
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+varD = VAR(D,lag.max=20,type="none",ic="FPE")
+plot(varD)
+
+# Should go with smaller model if it gets rid of residual autocorrelation
+
+varD1 = VAR(D,type="none",p=3)
+
+plot(varD1)
+
+Pacf(varD1)
+
+
+
+
+
+#NorthEast & TETCO M-3
+
+
+library(readxl)
+NorthNG1 <- read_excel("C:/Users/qtaillefer/Downloads/NorthNG1.xlsx", 
+                       col_types = c("date", "numeric", "numeric"))
+View(NorthNG1)
+
+plot(NorthNG1)
+
+# Adjust time window for the Natural gas demand 
+
+tsprod2 <- na.omit(ts(NorthNG1$Production,frequency = 365, start = 2016))
+
+plot(tsprod2)
+
+tail(tsprod2)
+
+
+
+# Adjust time window for the Total degree days
+
+tsprice2 <- na.omit(ts(NorthNG1$Price, frequency = 365, start = 2016))
+
+plot(tsprice2)
+
+tail(tsprice2)
+
+
+
+# Take the series first difference
+
+dtsprod2 <- na.omit(diff(tsprod2))
+
+dtsprice2 <- na.omit(diff(tsprice2))
+
+
+# Test the stationarity of the series level
+
+adf.test(tsprod2)
+
+adf.test(tsprice2)
+
+
+
+# Test  stationarity for the series first difference
+
+adf.test(dtsprod2)
+
+adf.test(dtsprice2)
+
+
+# Bind the series levels 
+
+Bind2 <-cbind(tsprod2,tsprice2)
+
+View(Bind2)
+
+plot(Bind2)
+
+
+
+# Bind the differenciated series for use in Q1
+
+Bdind2 <-cbind(dtsprod2,dtsprice2)
+
+View(Bdind2)
+
+plot(Bdind2)
+
+
+
+# This is just for fun look at Linear model to see if there is correlation, removed my dollars index and price of natural gas because there was no correlation 
+
+Linearmodel2<-lm(tsprod2~tsprice2)
+
+print(Linearmodel2)
+
+summary(Linearmodel2)
+
+
+
+
+# Question 1 
+
+
+# Estimating a VAR for price returns
+
+# use vars() package
+
+D2 = cbind(dtsprod2,dtsprice2)
+D2
+
+
+
+# show series and summary statistics
+
+plot(D2,xlab="")
+
+summary(D2)
+
+# select lag length
+
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+VARselect(D2,lag.max=40,type="both")
+
+
+var2 <- VAR(D2, p = 2, type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 10))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 10))
+
+
+var2 <- VAR(D2, p = 6, type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 10, ci=0.70))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 10, ci=0.70))
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+varD2 = VAR(D2,lag.max=20,type="none",ic="FPE")
+plot(varD2)
+
+# Should go with smaller model if it gets rid of residual autocorrelation
+
+varD3 = VAR(D2,type="none",p=2)
+
+plot(varD3)
+
+Pacf(varD3)
+
+
+
+
+
+
+
+
+
+
+
+#Gulf & Henry Hub
+library(readxl)
+GulfNG1 <- read_excel("C:/Users/qtaillefer/Downloads/GulfNG1.xlsx", 
+                      col_types = c("date", "numeric", "numeric"))
+View(GulfNG1)
+
+plot(GulfNG1)
+
+# Adjust time window for the Natural gas demand 
+
+tsprod2 <- na.omit(ts(GulfNG1$Production,frequency = 365, start = 2016))
+plot(tsprod2)
+
+tail(tsprod2)
+
+
+
+# Adjust time window for the Total degree days
+
+tsprice2 <- na.omit(ts(GulfNG1$Price, frequency = 365, start = 2016))
+
+plot(tsprice2)
+
+tail(tsprice2)
+
+
+
+# Take the series first difference
+
+dtsprod2 <- na.omit(diff(tsprod2))
+
+dtsprice2 <- na.omit(diff(tsprice2))
+
+
+# Test the stationarity of the series level
+
+adf.test(tsprod2)
+
+adf.test(tsprice2)
+
+
+
+# Test  stationarity for the series first difference
+
+adf.test(dtsprod2)
+
+adf.test(dtsprice2)
+
+
+# Bind the series levels 
+
+Bind2 <-cbind(tsprod2,tsprice2)
+
+View(Bind2)
+
+plot(Bind2)
+
+
+
+# Bind the differenciated series for use in Q1
+
+Bdind2 <-cbind(dtsprod2,dtsprice2)
+
+View(Bdind2)
+
+plot(Bdind2)
+
+# This is just for fun look at Linear model to see if there is correlation, removed my dollars index and price of natural gas because there was no correlation 
+
+Linearmodel2<-lm(tsprod2~tsprice2)
+
+print(Linearmodel2)
+
+summary(Linearmodel2)
+
+# Question 1 
+
+# Estimating a VAR for price returns
+
+# use vars() package
+
+D2 = cbind(dtsprod2,dtsprice2)
+D2
+
+# show series and summary statistics
+
+plot(D2,xlab="")
+
+summary(D2)
+
+# select lag length
+
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+VARselect(D2,lag.max=20,type="both")
+
+
+var2 <- VAR(D2, p = 4, type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 10))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 10))
+
+
+var2 <- VAR(D2, p =4 , type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 10, ci=0.70))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 10, ci=0.70))
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+varD2 = VAR(D2,lag.max=20,type="none",ic="FPE")
+plot(varD2)
+
+# Should go with smaller model if it gets rid of residual autocorrelation
+
+varD3 = VAR(D2,type="none",p=4)
+
+plot(varD3)
+
+Pacf(varD3)
+
+
+
+#Rockies & CIG
+
+library(readxl)
+RockiesNG1 <- read_excel("C:/Users/qtaillefer/Downloads/RockiesNG1.xlsx", 
+                      col_types = c("date", "numeric", "numeric"))
+View(RockiesNG1)
+
+plot(RockiesNG1)
+
+# Adjust time window for the Natural gas demand 
+
+tsprod2 <- na.omit(ts(RockiesNG1$Production,frequency = 365, start = 2016))
+plot(tsprod2)
+
+tail(tsprod2)
+
+
+
+# Adjust time window for the Total degree days
+
+tsprice2 <- na.omit(ts(RockiesNG1$Price, frequency = 365, start = 2016))
+
+plot(tsprice2)
+
+tail(tsprice2)
+
+
+
+# Take the series first difference
+
+dtsprod2 <- na.omit(diff(tsprod2))
+
+dtsprice2 <- na.omit(diff(tsprice2))
+
+
+# Test the stationarity of the series level
+
+adf.test(tsprod2)
+
+adf.test(tsprice2)
+
+
+
+# Test  stationarity for the series first difference
+
+adf.test(dtsprod2)
+
+adf.test(dtsprice2)
+
+
+# Bind the series levels 
+
+Bind2 <-cbind(tsprod2,tsprice2)
+
+View(Bind2)
+
+plot(Bind2)
+
+
+
+# Bind the differenciated series for use in Q1
+
+Bdind2 <-cbind(dtsprod2,dtsprice2)
+
+View(Bdind2)
+
+plot(Bdind2)
+
+# This is just for fun look at Linear model to see if there is correlation, removed my dollars index and price of natural gas because there was no correlation 
+
+Linearmodel2<-lm(tsprod2~tsprice2)
+
+print(Linearmodel2)
+
+summary(Linearmodel2)
+
+# Question 1 
+
+# Estimating a VAR for price returns
+
+# use vars() package
+
+D2 = cbind(dtsprod2,dtsprice2)
+D2
+
+# show series and summary statistics
+
+plot(D2,xlab="")
+summary(D2)
+
+# select lag length
+
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+VARselect(D2,lag.max=20,type="none")
+
+
+var2 <- VAR(D2, p = 8, type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 10))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 10))
+
+
+var2 <- VAR(D2, p =8 , type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 10, ci=0.70))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 10, ci=0.70))
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+varD2 = VAR(D2,lag.max=20,type="none",ic="FPE")
+plot(varD2)
+
+# Should go with smaller model if it gets rid of residual autocorrelation
+
+varD3 = VAR(D2,type="none",p=8)
+
+plot(varD3)
+
+Pacf(varD3)
+
+
+
+
+#Midcon & ONEOK
+
+
+library(readxl)
+MidconNG1 <- read_excel("C:/Users/qtaillefer/Downloads/MidconNG1.xlsx", 
+                         col_types = c("date", "numeric", "numeric"))
+View(MidconNG1)
+
+plot(MidconNG1)
+
+# Adjust time window for the Natural gas demand 
+
+tsprod2 <- na.omit(ts(MidconNG1$Production,frequency = 365, start = 2016))
+plot(tsprod2)
+
+tail(tsprod2)
+
+
+
+# Adjust time window for the Total degree days
+
+tsprice2 <- na.omit(ts(MidconNG1$Price, frequency = 365, start = 2016))
+
+plot(tsprice2)
+
+tail(tsprice2)
+
+
+
+# Take the series first difference
+
+dtsprod2 <- na.omit(diff(tsprod2))
+
+dtsprice2 <- na.omit(diff(tsprice2))
+
+
+# Test the stationarity of the series level
+
+adf.test(tsprod2)
+
+adf.test(tsprice2)
+
+
+
+# Test  stationarity for the series first difference
+
+adf.test(dtsprod2)
+
+adf.test(dtsprice2)
+
+
+# Bind the series levels 
+
+Bind2 <-cbind(tsprod2,tsprice2)
+
+View(Bind2)
+
+plot(Bind2)
+
+
+
+# Bind the differenciated series for use in Q1
+
+Bdind2 <-cbind(dtsprod2,dtsprice2)
+
+View(Bdind2)
+
+plot(Bdind2)
+
+# This is just for fun look at Linear model to see if there is correlation, removed my dollars index and price of natural gas because there was no correlation 
+
+Linearmodel2<-lm(tsprod2~tsprice2)
+
+print(Linearmodel2)
+
+summary(Linearmodel2)
+
+# Question 1 
+
+# Estimating a VAR for price returns
+
+# use vars() package
+
+D2 = cbind(dtsprod2,dtsprice2)
+D2
+
+# show series and summary statistics
+
+plot(D2,xlab="")
+summary(D2)
+
+# select lag length
+
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+VARselect(D2,lag.max=20,type="none")
+
+
+var2 <- VAR(D2, p = 8, type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 20))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 20))
+
+
+var2 <- VAR(D2, p =10 , type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 10, ci=0.70))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 10, ci=0.70))
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+varD2 = VAR(D2,lag.max=20,type="none",ic="FPE")
+plot(varD2)
+
+# Should go with smaller model if it gets rid of residual autocorrelation
+
+varD3 = VAR(D2,type="none",p=8)
+
+plot(varD3)
+
+Pacf(varD3)
+
+
+
+#SouthEastNG1
+
+
+
+library(readxl)
+SouthEastNG1 <- read_excel("C:/Users/qtaillefer/Downloads/SouthEastNG1.xlsx", 
+                        col_types = c("date", "numeric", "numeric"))
+View(SouthEastNG1)
+
+plot(SouthEastNG1)
+
+# Adjust time window for the Natural gas demand 
+
+tsprod2 <- na.omit(ts(SouthEastNG11$Production,frequency = 365, start = 2016))
+plot(tsprod2)
+
+tail(tsprod2)
+
+
+
+# Adjust time window for the Total degree days
+
+tsprice2 <- na.omit(ts(SouthEastNG1$Price, frequency = 365, start = 2016))
+
+plot(tsprice2)
+
+tail(tsprice2)
+
+
+
+# Take the series first difference
+
+dtsprod2 <- na.omit(diff(tsprod2))
+
+dtsprice2 <- na.omit(diff(tsprice2))
+
+
+# Test the stationarity of the series level
+
+adf.test(tsprod2)
+
+adf.test(tsprice2)
+
+
+
+# Test  stationarity for the series first difference
+
+adf.test(dtsprod2)
+
+adf.test(dtsprice2)
+
+
+# Bind the series levels 
+
+Bind2 <-cbind(tsprod2,tsprice2)
+
+View(Bind2)
+
+plot(Bind2)
+
+
+
+# Bind the differenciated series for use in Q1
+
+Bdind2 <-cbind(dtsprod2,dtsprice2)
+
+View(Bdind2)
+
+plot(Bdind2)
+
+# This is just for fun look at Linear model to see if there is correlation, removed my dollars index and price of natural gas because there was no correlation 
+
+Linearmodel2<-lm(tsprod2~tsprice2)
+
+print(Linearmodel2)
+
+summary(Linearmodel2)
+
+# Question 1 
+
+# Estimating a VAR for price returns
+
+# use vars() package
+
+D2 = cbind(dtsprod2,dtsprice2)
+D2
+
+# show series and summary statistics
+
+plot(D2,xlab="")
+summary(D2)
+
+# select lag length
+
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+VARselect(D2,lag.max=20,type="none")
+
+
+var2 <- VAR(D2, p = 3, type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 20))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 20))
+
+
+var2 <- VAR(D2, p =3 , type = "both")
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = FALSE,     n.ahead = 10, ci=0.70))
+plot(irf(var2, impulse = "dtsprice2", response = "dtsprod2", boot = T, cumulative = TRUE,     n.ahead = 10, ci=0.75))
+# HQ and SC select 1 lag, FPE and AIC select 9 lags, same as below:
+
+varD2 = VAR(D2,lag.max=20,type="none",ic="FPE")
+plot(varD2)
+
+# Should go with smaller model if it gets rid of residual autocorrelation
+
+varD3 = VAR(D2,type="none",p=4)
+
+plot(varD3)
+
+Pacf(varD3)
